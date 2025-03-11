@@ -1,0 +1,21 @@
+{
+  "name": "hololive-names-dict",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node build/main.js",
+    "build-and-start": "tsc\nnode build/main.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "typescript": "^5.8.2"
+  },
+  "dependencies": {
+    "ts-node": "^10.9.2"
+  }
+}

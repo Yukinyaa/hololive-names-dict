@@ -1,0 +1,14 @@
+{
+    "compilerOptions": {
+      "target": "ES2019",
+      "module": "commonjs",
+      "rootDir": "./",
+      "outDir": "./build",
+      "strict": true,
+      "esModuleInterop": true,
+      "types": ["node"]
+    },
+    "include": ["./hololive-dictionary/src/**/*", "./**/*.ts"],
+    "exclude": ["node_modules"]
+  }
+  

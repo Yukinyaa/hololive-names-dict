@@ -24,7 +24,7 @@ jobs:
       run: npm install
 
     - name: Build Migaku Library
-      run: npm run build:migaku
+      run: npm run build-and-run
 
     - name: Create Release
       id: create_release
@@ -43,6 +43,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./migaku_library.tsv
+        asset_path: ./hololive-names-dict/build/migaku_library.tsv
         asset_name: migaku_library.tsv
         asset_content_type: text/tab-separated-values

@@ -68,3 +68,5 @@ export function saveMigakuFile(filename: string = 'migaku_library.tsv') {
   fs.writeFileSync(outputPath, migakuData);
   console.log(`Migaku library saved to ${outputPath}`);
 }
+
+saveMigakuFile()

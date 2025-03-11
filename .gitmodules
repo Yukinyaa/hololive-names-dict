@@ -1,0 +1,3 @@
+[submodule "hololive-dictionary"]
+	path = hololive-dictionary
+	url = https://github.com/heppokofrontend/hololive-dictionary.git

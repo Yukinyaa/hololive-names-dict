@@ -1,4 +1,4 @@
-name: Publish as Yomitan Library
+name: Publish as Yomitan Dictionary
 
 on:
   push:
@@ -27,26 +27,24 @@ jobs:
     - name: Install dependencies
       run: npm install
 
-    - name: Build Library
+    - name: Build Dictionary
       run: npm run build-and-run
 
     - name: Create Release
       id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: thomaseizinger/create-release@master
       with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
         tag_name: R${{ github.run_number }}
-        release_name: Yomitan Library Release ${{ github.run_number }}
+        release_name: Yomitan Hololive Names Dictionary Release ${{ github.run_number }}
         draft: false
         prerelease: false
 
-    - name: Upload Yomitan Library
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Upload Yomitan Dictionary
+      uses: softprops/action-gh-release@v2
       with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
         upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: ./build/hololive-dictionary.zip
         asset_name: hololive-dictionary.zip
-        asset_content_type: zip/application
+        asset_content_type: application/zip

@@ -4,8 +4,9 @@
   "main": "index.js",
   "scripts": {
     "build": "tsc",
-    "start": "node build/main.js",
-    "build-and-start": "tsc\nnode build/main.js"
+    "run": "node build/main.js",
+    "build-and-run": "tsc && node build/main.js",
+    "build:migaku": "ts-node main.ts"
   },
   "keywords": [],
   "author": "",

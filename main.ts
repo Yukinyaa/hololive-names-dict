@@ -1,15 +1,24 @@
 // /workspace/main.ts
 
-import { dictionary } from './hololive-dictionary/src/dictionary';
+import { dictionary as hololiveDictionary } from './hololive-dictionary/src/dictionary';
 import fs from 'fs';
 import path from 'path';
 
-// Utility function to check if a word contains only English characters
+// Import the yomichan-dict-builder package
+const {
+  Dictionary,
+  DictionaryIndex,
+  TermEntry,
+  KanjiEntry,
+} = require('yomichan-dict-builder');
+
+// Utility function: check if a word consists of only English characters
 function isEnglishOnly(word: string): boolean {
-  return /^[A-Za-z0-9\s_'\\,\(\)α]+$/.test(word);
+  return /^[A-Za-z0-9\s_\-',\(\)α\\]+$/.test(word);
 }
 
-// Generate split name entries (e.g., 'ななし むめい' -> ['ななし', 'むめい'])
+// Generate split name entries (e.g., [ 'ななし むめい', '七詩 ムメイ' ] becomes
+// [ [ 'ななし', '七詩' ], [ 'むめい', 'ムメイ' ] ])
 function generateSplitNameEntries(name: [string, string]): [string, string][] {
   const [reading, word] = name;
   const readingParts = reading.split(' ');
@@ -21,52 +30,88 @@ function generateSplitNameEntries(name: [string, string]): [string, string][] {
   return [];
 }
 
-// Transform the dictionary into a Migaku-compatible format
-function transformToMigaku(dictionary: LiverData[]): string {
-  const lines: string[] = [];
-
-  dictionary.forEach(entry => {
-    const baseNote = `${entry.name[1] ?? entry.name[0]} ${entry.marks[0] ?? ''}`.trim();
-    if (entry.name[0].length !== 0) {
-      if (!isEnglishOnly(entry.name[1])) {
-        lines.push([entry.name[0], entry.name[1], '人名', baseNote].join('\t'));
-        
-        const splitEntries = generateSplitNameEntries(entry.name);
-        splitEntries.forEach(([subReading, subWord]) => {
-          if (!isEnglishOnly(subWord)) {
-            lines.push([subReading, subWord, '人名', baseNote].join('\t'));
-          }
-        });
-      }
-    }
-
-    entry.alias.forEach(alias => {
-      const aliasReading = alias[0];
-      const aliasWord = alias[1] ?? alias[0];
-      if (!isEnglishOnly(aliasWord)) {
-        lines.push([aliasReading, aliasWord, '人名(ニックネーム)', baseNote].join('\t'));
-      }
-    });
-
-    if (entry.others) {
-      entry.others.forEach(other => {
-        const [reading, word] = other;
-        if (!isEnglishOnly(word)) {
-          lines.push([reading, word, '▶', baseNote].join('\t'));
-        }
-      });
-    }
+// Async function to build the Yomichan dictionary
+async function buildYomichanDictionary() {
+  // Create a new dictionary instance (the output will be a zip file)
+  const yomichanDict = new Dictionary({
+    fileName: 'hololive-dictionary.zip',
   });
 
-  return lines.join('\n');
+  // Build the dictionary index
+  const index = new DictionaryIndex()
+    .setTitle('Hololive Dictionary')
+    .setRevision('1.0')
+    .setAuthor('yukinyaa')
+    .setDescription('Hololive name/term dictionary built from heppokofrontend/hololive-dictionary')
+    .setAttribution('hololive-dictionary')
+    .setUrl('https://github.com/Yukinyaa/hololive-names-dict')
+    .build();
+
+  await yomichanDict.setIndex(index);
+
+  // Iterate over each hololive entry and add term entries
+  for (const entry of hololiveDictionary) {
+    if (entry.name[0].length != 0)
+    {
+      // Create a base note from the full name and first mark
+      const baseNote = `${entry.name[1] ?? entry.name[0]} ${entry.marks[0] ?? ''}`.trim();
+
+      // --- Main name entry ---
+      // In hololive-dictionary, name is [reading, word]
+      const mainTermEntry = new TermEntry(entry.name[1])
+        .setReading(entry.name[0])
+        .addDetailedDefinition(`人名: ${baseNote}`)
+        .build();
+      await yomichanDict.addTerm(mainTermEntry);
+
+      // --- Split name entries (if the name contains spaces) ---
+      const splitEntries = generateSplitNameEntries(entry.name);
+      for (const [subReading, subWord] of splitEntries) {
+        if (!isEnglishOnly(subWord)) {
+          const splitEntry = new TermEntry(subWord)
+            .setReading(subReading)
+            .addDetailedDefinition(`人名: ${baseNote}`)
+            .build();
+          await yomichanDict.addTerm(splitEntry);
+        }
+      }
+
+      // --- Alias entries ---
+      entry.alias.forEach(async (alias: [string, string] | [string]) => {
+        const aliasReading = alias[0];
+        const aliasWord = alias[1] ?? alias[0];
+        if (!isEnglishOnly(aliasWord)) {
+          const aliasEntry = new TermEntry(aliasWord)
+            .setReading(aliasReading)
+            .addDetailedDefinition(`人名(ニックネーム): ${baseNote}`)
+            .build();
+          await yomichanDict.addTerm(aliasEntry);
+        }
+      });
+      
+
+      // --- Others entries ---
+      if (entry.others) {
+        for (const other of entry.others) {
+          const [otherReading, otherWord] = other;
+          if (!isEnglishOnly(otherWord)) {
+            const othersEntry = new TermEntry(otherWord)
+              .setReading(otherReading)
+              .addDetailedDefinition(`Fanname/etc: ${baseNote}`)
+              .build();
+            await yomichanDict.addTerm(othersEntry);
+          }
+        }
+      }
+    } // end if (entry.name[0].length === 0)
+
+  } // end for (const entry of hololiveDictionary)
+
+  // Export the dictionary (this will create a zip file in the specified folder)
+  const stats = await yomichanDict.export('./build');
+  console.log('Done exporting!');
+  console.table(stats);
 }
 
-// Save the transformed data to a file
-export function saveMigakuFile(filename: string = 'migaku_library.tsv') {
-  const migakuData = transformToMigaku(dictionary);
-  const outputPath = path.resolve(__dirname, filename);
-  fs.writeFileSync(outputPath, migakuData);
-  console.log(`Migaku library saved to ${outputPath}`);
-}
-
-saveMigakuFile()
+// Run the build function and catch any errors
+buildYomichanDictionary().catch(err => console.error(err));
